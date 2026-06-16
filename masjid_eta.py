@@ -20,6 +20,7 @@ Usage:
     -w / --whatsapp   WhatsApp-ready text (copy-paste)
     -p / --preview    open a formatted WhatsApp-style preview in the browser
     -c / --config P   use config file P (default: config.json beside this script)
+    -a / --arrive T   override target arrival time, e.g. 19:00, 7pm, 9:45am
 """
 
 import os
@@ -40,6 +41,28 @@ WEEKDAYS = {
 }
 
 LEVEL_EMOJI = {"heavy": "🔴", "moderate": "🟠", "light": "🟢", "": ""}
+
+
+def parse_clock(s):
+    """Parse a time like '19:00', '7pm', '9:45am', '9' into (hour, minute)."""
+    t = s.strip().lower().replace(" ", "")
+    ampm = None
+    if t.endswith("am"):
+        ampm, t = "am", t[:-2]
+    elif t.endswith("pm"):
+        ampm, t = "pm", t[:-2]
+    try:
+        hh, mm = (t.split(":") + ["0"])[:2]
+        hh, mm = int(hh), int(mm)
+    except ValueError:
+        raise ValueError(f"could not parse time '{s}' (try 19:00, 7pm, 9:45am)")
+    if ampm == "pm" and hh != 12:
+        hh += 12
+    if ampm == "am" and hh == 12:
+        hh = 0
+    if not (0 <= hh < 24 and 0 <= mm < 60):
+        raise ValueError(f"time out of range: '{s}'")
+    return hh, mm
 
 DISCLAIMER = ("Point-in-time estimate from Google Maps APIs. Actual traffic and "
               "travel times will vary — no guarantees.")
@@ -284,6 +307,7 @@ def main():
     preview = any(a in ("-p", "--preview") for a in args)
 
     config_path = DEFAULT_CONFIG
+    arrive_override = None
     rest = []
     i = 0
     while i < len(args):
@@ -293,6 +317,11 @@ def main():
             if i >= len(args):
                 sys.exit("--config needs a path")
             config_path = args[i]
+        elif a in ("-a", "--arrive"):
+            i += 1
+            if i >= len(args):
+                sys.exit("--arrive needs a time, e.g. 19:00 or 7pm")
+            arrive_override = args[i]
         elif a in ("-w", "--whatsapp", "-p", "--preview"):
             pass
         else:
@@ -301,6 +330,11 @@ def main():
     arg = rest[0] if rest else None
 
     cfg = load_config(config_path)
+    if arrive_override is not None:
+        try:
+            cfg.arrive_hour, cfg.arrive_min = parse_clock(arrive_override)
+        except ValueError as e:
+            sys.exit(str(e))
     dest_wp = waypoint(cfg.destination)
     now = dt.datetime.now(cfg.tz)
     now_mode = (arg or "").lower() == "now"

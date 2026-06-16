@@ -80,6 +80,7 @@ Flags (combine freely):
 | `-w`, `--whatsapp` | Print WhatsApp-ready text (copy-paste into a chat) |
 | `-p`, `--preview` | Open a formatted WhatsApp-style preview in your browser, with a Copy button |
 | `-c`, `--config P` | Use a different config file |
+| `-a`, `--arrive T` | Override the arrival time for this run, e.g. `19:00`, `7pm`, `9:45am` |
 
 A convenience wrapper is included:
 
