@@ -9,9 +9,16 @@
     "Prosper": { "lat": 33.2362, "lng": -96.8011 },
     "Celina": { "lat": 33.3248, "lng": -96.7836 },
     "West McKinney": { "lat": 33.1976, "lng": -96.7283 },
-    "East McKinney": { "lat": 33.2008, "lng": -96.6256 },
     "Plano": { "lat": 33.0137, "lng": -96.6967 },
     "Allen": { "lat": 33.1027, "lng": -96.6712 },
-    "Murphy": { "lat": 33.0179, "lng": -96.6131 }
+    "Murphy": { "lat": 33.0179, "lng": -96.6131 },
+    "Melissa": { "lat": 33.2857, "lng": -96.5728 },
+    "Anna": { "lat": 33.3490, "lng": -96.5486 },
+    "Princeton": { "lat": 33.1801, "lng": -96.4978 },
+    "Fairview": { "lat": 33.1454, "lng": -96.6300 },
+    "Lucas": { "lat": 33.0892, "lng": -96.5772 },
+    "Wylie": { "lat": 33.0151, "lng": -96.5388 },
+    "Sachse": { "lat": 32.9787, "lng": -96.5816 },
+    "Lewisville": { "lat": 33.0462, "lng": -96.9942 }
   }
 }
