@@ -1,0 +1,17 @@
+{
+  "name": "Masjid ETA",
+  "emoji": "🕌",
+  "destination": "1410 S Tennessee St, McKinney, TX 75069",
+  "arrive": "09:45",
+  "timezone": "America/Chicago",
+  "origins": {
+    "Frisco": { "lat": 33.1518, "lng": -96.8278 },
+    "Prosper": { "lat": 33.2362, "lng": -96.8011 },
+    "Celina": { "lat": 33.3248, "lng": -96.7836 },
+    "West McKinney": { "lat": 33.1976, "lng": -96.7283 },
+    "East McKinney": { "lat": 33.2008, "lng": -96.6256 },
+    "Plano": { "lat": 33.0137, "lng": -96.6967 },
+    "Allen": { "lat": 33.1027, "lng": -96.6712 },
+    "Murphy": { "lat": 33.0179, "lng": -96.6131 }
+  }
+}

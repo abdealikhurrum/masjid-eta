@@ -1,0 +1,15 @@
+#!/bin/bash
+# Convenience wrapper: ensures the API key is set, then runs the tool.
+# Usage: ./eta [sat|sunday|YYYY-MM-DD|now] [-w] [-p] [-c config.json]
+#
+# The key must be in the GMAPS_API_KEY environment variable. Either export it:
+#     export GMAPS_API_KEY=your_key_here
+# ...or have this wrapper pull it from a secret manager, e.g. 1Password:
+#     export GMAPS_API_KEY="$(op item get 'My Maps Key' --fields credential --reveal)"
+set -euo pipefail
+DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -z "${GMAPS_API_KEY:-}" ]; then
+  echo "Set GMAPS_API_KEY first (see comments in this script)." >&2
+  exit 1
+fi
+exec python3 "$DIR/masjid_eta.py" "$@"
