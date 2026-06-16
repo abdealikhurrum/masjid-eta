@@ -4,6 +4,7 @@
   "destination": "1410 S Tennessee St, McKinney, TX 75069",
   "arrive": "09:45",
   "timezone": "America/Chicago",
+  "whatsapp_group": "Masjid Carpool",
   "origins": {
     "Downtown (by address)": "200 W Virginia St, McKinney, TX 75069",
     "Frisco (by coordinates)": { "lat": 33.1518, "lng": -96.8278 },

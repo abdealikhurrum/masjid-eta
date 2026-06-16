@@ -81,6 +81,38 @@ Flags (combine freely):
 | `-p`, `--preview` | Open a formatted WhatsApp-style preview in your browser, with a Copy button |
 | `-c`, `--config P` | Use a different config file |
 | `-a`, `--arrive T` | Override the arrival time for this run, e.g. `19:00`, `7pm`, `9:45am` |
+| `--send` | (macOS) Send the WhatsApp-formatted report to a group via WhatsApp Desktop |
+| `--stage` | (macOS) Dry run — open the group and paste, but do **not** press send |
+| `--group "Name"` | Target group (overrides `whatsapp_group` in config) |
+
+## Sending to a WhatsApp group (macOS only)
+
+The tool can deliver the report straight to a WhatsApp group by automating the
+**WhatsApp Desktop** app. Add the group name to your config:
+
+```json
+"whatsapp_group": "Masjid Carpool"
+```
+
+Then:
+
+```bash
+python masjid_eta.py sat --stage   # safe first: opens the group + pastes, no send
+python masjid_eta.py sat --send    # actually sends
+```
+
+How it works: the report (WhatsApp-formatted) is copied to your clipboard, then an
+AppleScript (`send_whatsapp.applescript`) activates WhatsApp, opens a new-chat
+search, types the group name, opens the top match, pastes, and presses send.
+
+**Requirements & caveats:**
+- macOS with the WhatsApp Desktop app installed and signed in.
+- Grant **Accessibility** permission to whatever runs it: System Settings →
+  Privacy & Security → Accessibility (enable your terminal app). Without it,
+  macOS blocks the keystrokes.
+- It targets the **top search result** for the group name, so use a name unique
+  enough to match the right chat. Run `--stage` first to confirm.
+- This automates your own desktop app; it does not use any WhatsApp API.
 
 A convenience wrapper is included:
 

@@ -21,6 +21,11 @@ Usage:
     -p / --preview    open a formatted WhatsApp-style preview in the browser
     -c / --config P   use config file P (default: config.json beside this script)
     -a / --arrive T   override target arrival time, e.g. 19:00, 7pm, 9:45am
+
+WhatsApp delivery (macOS only — drives the WhatsApp Desktop app):
+    --send            send the WhatsApp-formatted report to the group, then exit
+    --stage           dry run: open the group and paste, but DO NOT press send
+    --group "Name"    target group (overrides "whatsapp_group" in the config)
 """
 
 import os
@@ -81,6 +86,7 @@ class Config:
         if not data.get("origins"):
             raise ValueError("config needs at least one entry in 'origins'")
         self.origins = data["origins"]                    # name -> address or {lat,lng}
+        self.whatsapp_group = data.get("whatsapp_group")  # default WhatsApp target
 
     @property
     def arrive_str(self):
@@ -295,6 +301,40 @@ button:active{{opacity:.8}} .ok{{color:#7fdba0;margin-top:10px;height:18px;font-
     return f.name
 
 
+SEND_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "send_whatsapp.applescript")
+
+
+def send_to_whatsapp(text, group, do_send):
+    """Copy `text` to the clipboard and drive WhatsApp Desktop to deliver it.
+
+    do_send=False stages the message (opens group + pastes) without sending.
+    macOS only.
+    """
+    import subprocess
+    if sys.platform != "darwin":
+        sys.exit("WhatsApp sending uses the macOS Desktop app — only works on macOS.")
+    if not group:
+        sys.exit("No group set. Use --group \"Name\" or add \"whatsapp_group\" to config.")
+    if not os.path.exists(SEND_SCRIPT):
+        sys.exit(f"Missing {SEND_SCRIPT}")
+    try:
+        subprocess.run(["pbcopy"], input=text.encode("utf-8"), check=True)
+    except Exception as e:                               # noqa: BLE001
+        sys.exit(f"Could not copy message to clipboard: {e}")
+    mode = "send" if do_send else "stage"
+    proc = subprocess.run(["osascript", SEND_SCRIPT, group, mode],
+                          capture_output=True, text=True)
+    if proc.returncode != 0:
+        err = proc.stderr.strip() or "osascript failed"
+        if "not allowed assistive" in err or "1002" in err:
+            err += ("\nGrant Accessibility permission: System Settings > Privacy & "
+                    "Security > Accessibility (enable your terminal app).")
+        sys.exit(f"WhatsApp automation failed: {err}")
+    verb = "Sent to" if do_send else "Staged for (not sent)"
+    print(f"{verb} WhatsApp group: {group}")
+
+
 # --- Main ----------------------------------------------------------------
 
 def main():
@@ -305,9 +345,12 @@ def main():
     args = sys.argv[1:]
     whatsapp = any(a in ("-w", "--whatsapp") for a in args)
     preview = any(a in ("-p", "--preview") for a in args)
+    do_send = "--send" in args
+    do_stage = "--stage" in args
 
     config_path = DEFAULT_CONFIG
     arrive_override = None
+    group_override = None
     rest = []
     i = 0
     while i < len(args):
@@ -322,7 +365,12 @@ def main():
             if i >= len(args):
                 sys.exit("--arrive needs a time, e.g. 19:00 or 7pm")
             arrive_override = args[i]
-        elif a in ("-w", "--whatsapp", "-p", "--preview"):
+        elif a == "--group":
+            i += 1
+            if i >= len(args):
+                sys.exit("--group needs a name")
+            group_override = args[i]
+        elif a in ("-w", "--whatsapp", "-p", "--preview", "--send", "--stage"):
             pass
         else:
             rest.append(a)
@@ -368,7 +416,11 @@ def main():
 
     rows.sort(key=lambda r: (r[1] is None, r[1] or 0))
 
-    if preview:
+    if do_send or do_stage:
+        text = whatsapp_text(cfg, title, time_label, rows)
+        print(text + "\n")
+        send_to_whatsapp(text, group_override or cfg.whatsapp_group, do_send)
+    elif preview:
         text = whatsapp_text(cfg, title, time_label, rows)
         path = open_preview(text)
         print(f"Opened WhatsApp preview in your browser ({path})\n")
