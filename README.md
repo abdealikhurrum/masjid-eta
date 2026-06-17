@@ -84,6 +84,21 @@ Flags (combine freely):
 | `--send` | (macOS) Send the WhatsApp-formatted report to a group via WhatsApp Desktop |
 | `--stage` | (macOS) Dry run — open the group and paste, but do **not** press send |
 | `--group "Name"` | Target group (overrides `whatsapp_group` in config) |
+| `--map` | Render a static PNG map — route lines + colored origin markers + labels |
+| `--map-out P` | Map output path (default `~/masjid-map.png`) |
+
+## Map visualization
+
+```bash
+python masjid_eta.py sat --map
+```
+
+Renders a static PNG showing each driving route as a line colored by traffic
+(🟢 light / 🟠 moderate / 🔴 heavy), a colored dot + `name + drive time` label per
+origin, and the destination marked in the middle. The map is drawn from
+OpenStreetMap tiles with Pillow — **no mapping API key needed** (route geometry
+comes from the Routes API you already use). Requires `Pillow` (`pip install Pillow`).
+On macOS the image opens automatically; the file is shareable (e.g. drop into chat).
 
 ## Sending to a WhatsApp group (macOS only)
 

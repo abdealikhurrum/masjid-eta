@@ -21,6 +21,8 @@ Usage:
     -p / --preview    open a formatted WhatsApp-style preview in the browser
     -c / --config P   use config file P (default: config.json beside this script)
     -a / --arrive T   override target arrival time, e.g. 19:00, 7pm, 9:45am
+    --map             render a static PNG map (routes + colored markers), then open it
+    --map-out P       map output path (default: ~/masjid-map.png)
 
 WhatsApp delivery (macOS only — drives the WhatsApp Desktop app):
     --send            send the WhatsApp-formatted report to the group, then exit
@@ -182,6 +184,28 @@ def freeflow_seconds(api_key, origin_wp, dest_wp):
     return _route_duration(api_key, origin_wp, dest_wp, None, traffic=False)[0]
 
 
+def route_polyline(api_key, origin_wp, dest_wp):
+    """Encoded overview polyline for the driving route (for map drawing)."""
+    body = {
+        "origin": origin_wp,
+        "destination": dest_wp,
+        "travelMode": "DRIVE",
+        "routingPreference": "TRAFFIC_UNAWARE",
+        "polylineQuality": "OVERVIEW",
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": api_key,
+        "X-Goog-FieldMask": "routes.polyline.encodedPolyline",
+    }
+    r = requests.post(API_URL, json=body, headers=headers, timeout=20)
+    r.raise_for_status()
+    routes = r.json().get("routes")
+    if not routes:
+        raise RuntimeError("no route returned")
+    return routes[0]["polyline"]["encodedPolyline"]
+
+
 def leave_by(api_key, origin_wp, dest_wp, arrival, now):
     """Fixed-point iteration: find a departure so departure + traffic_duration ~ arrival.
 
@@ -305,6 +329,42 @@ SEND_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "send_whatsapp.applescript")
 
 
+def build_map(api_key, cfg, dest_wp, rows, title, out_path):
+    """Fetch route geometry per origin and render a static PNG map."""
+    import subprocess
+    import mapviz
+
+    print("\nFetching routes and rendering map…")
+    map_rows = []
+    dest = None
+    for name, dur, when, miles, late, level, err in rows:
+        if err:
+            continue
+        try:
+            pts = mapviz.decode_polyline(
+                route_polyline(api_key, waypoint(cfg.origins[name]), dest_wp))
+        except Exception as e:                           # noqa: BLE001
+            print(f"  {name}: route geometry unavailable ({e})")
+            continue
+        if not pts:
+            continue
+        if dest is None:
+            dest = pts[-1]                               # route ends at the destination
+        map_rows.append({
+            "name": name,
+            "level": level,
+            "label": f"{round(dur / 60)}m",
+            "points": pts,
+            "origin": pts[0],                            # route start ≈ origin
+        })
+    if not map_rows or dest is None:
+        sys.exit("No route geometry available — cannot render map.")
+    mapviz.render_map(map_rows, dest, title, out_path)
+    print(f"Map saved: {out_path}")
+    if sys.platform == "darwin":
+        subprocess.run(["open", out_path], check=False)
+
+
 def send_to_whatsapp(text, group, do_send):
     """Copy `text` to the clipboard and drive WhatsApp Desktop to deliver it.
 
@@ -347,10 +407,12 @@ def main():
     preview = any(a in ("-p", "--preview") for a in args)
     do_send = "--send" in args
     do_stage = "--stage" in args
+    do_map = "--map" in args
 
     config_path = DEFAULT_CONFIG
     arrive_override = None
     group_override = None
+    map_out = os.path.expanduser("~/masjid-map.png")
     rest = []
     i = 0
     while i < len(args):
@@ -370,7 +432,12 @@ def main():
             if i >= len(args):
                 sys.exit("--group needs a name")
             group_override = args[i]
-        elif a in ("-w", "--whatsapp", "-p", "--preview", "--send", "--stage"):
+        elif a == "--map-out":
+            i += 1
+            if i >= len(args):
+                sys.exit("--map-out needs a path")
+            map_out = args[i]
+        elif a in ("-w", "--whatsapp", "-p", "--preview", "--send", "--stage", "--map"):
             pass
         else:
             rest.append(a)
@@ -416,7 +483,10 @@ def main():
 
     rows.sort(key=lambda r: (r[1] is None, r[1] or 0))
 
-    if do_send or do_stage:
+    if do_map:
+        print_table(cfg, title, time_label, rows)
+        build_map(api_key, cfg, dest_wp, rows, f"{cfg.name} — {title}", map_out)
+    elif do_send or do_stage:
         text = whatsapp_text(cfg, title, time_label, rows)
         print(text + "\n")
         send_to_whatsapp(text, group_override or cfg.whatsapp_group, do_send)
